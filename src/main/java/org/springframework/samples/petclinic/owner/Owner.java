@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2019 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,8 +30,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.Digits;
-import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.NotBlank;
 
 /**
  * Simple JavaBean domain object representing an owner.
@@ -41,28 +41,29 @@ import jakarta.validation.constraints.NotEmpty;
  * @author Sam Brannen
  * @author Michael Isvy
  * @author Oliver Drotbohm
+ * @author Wick Dynex
  */
 @Entity
 @Table(name = "owners")
 public class Owner extends Person {
 
 	@Column(name = "address")
-	@NotEmpty
+	@NotBlank
 	private String address;
 
 	@Column(name = "city")
-	@NotEmpty
+	@NotBlank
 	private String city;
 
 	@Column(name = "telephone")
-	@NotEmpty
-	@Digits(fraction = 0, integer = 10)
+	@NotBlank
+	@Pattern(regexp = "\\d{10}", message = "{telephone.invalid}")
 	private String telephone;
 
 	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
 	@JoinColumn(name = "owner_id")
 	@OrderBy("name")
-	private List<Pet> pets = new ArrayList<>();
+	private final List<Pet> pets = new ArrayList<>();
 
 	public String getAddress() {
 		return this.address;
@@ -101,7 +102,7 @@ public class Owner extends Person {
 	/**
 	 * Return the Pet with the given name, or null if none found for this Owner.
 	 * @param name to test
-	 * @return a pet if pet name is already in use
+	 * @return the Pet with the given name, or null if no such Pet exists for this Owner
 	 */
 	public Pet getPet(String name) {
 		return getPet(name, false);
@@ -109,8 +110,8 @@ public class Owner extends Person {
 
 	/**
 	 * Return the Pet with the given id, or null if none found for this Owner.
-	 * @param name to test
-	 * @return a pet if pet id is already in use
+	 * @param id to test
+	 * @return the Pet with the given id, or null if no such Pet exists for this Owner
 	 */
 	public Pet getPet(Integer id) {
 		for (Pet pet : getPets()) {
@@ -127,15 +128,14 @@ public class Owner extends Person {
 	/**
 	 * Return the Pet with the given name, or null if none found for this Owner.
 	 * @param name to test
-	 * @return a pet if pet name is already in use
+	 * @param ignoreNew whether to ignore new pets (pets that are not saved yet)
+	 * @return the Pet with the given name, or null if no such Pet exists for this Owner
 	 */
 	public Pet getPet(String name, boolean ignoreNew) {
-		name = name.toLowerCase();
 		for (Pet pet : getPets()) {
-			if (!ignoreNew || !pet.isNew()) {
-				String compName = pet.getName();
-				compName = compName == null ? "" : compName.toLowerCase();
-				if (compName.equals(name)) {
+			String compName = pet.getName();
+			if (compName != null && compName.equalsIgnoreCase(name)) {
+				if (!ignoreNew || !pet.isNew()) {
 					return pet;
 				}
 			}
@@ -145,10 +145,14 @@ public class Owner extends Person {
 
 	@Override
 	public String toString() {
-		return new ToStringCreator(this).append("id", this.getId()).append("new", this.isNew())
-				.append("lastName", this.getLastName()).append("firstName", this.getFirstName())
-				.append("address", this.address).append("city", this.city).append("telephone", this.telephone)
-				.toString();
+		return new ToStringCreator(this).append("id", this.getId())
+			.append("new", this.isNew())
+			.append("lastName", this.getLastName())
+			.append("firstName", this.getFirstName())
+			.append("address", this.address)
+			.append("city", this.city)
+			.append("telephone", this.telephone)
+			.toString();
 	}
 
 	/**
@@ -156,7 +160,7 @@ public class Owner extends Person {
 	 * @param petId the identifier of the {@link Pet}, must not be {@literal null}.
 	 * @param visit the visit to add, must not be {@literal null}.
 	 */
-	public Owner addVisit(Integer petId, Visit visit) {
+	public void addVisit(Integer petId, Visit visit) {
 
 		Assert.notNull(petId, "Pet identifier must not be null!");
 		Assert.notNull(visit, "Visit must not be null!");
@@ -166,8 +170,6 @@ public class Owner extends Person {
 		Assert.notNull(pet, "Invalid Pet identifier!");
 
 		pet.addVisit(visit);
-
-		return this;
 	}
 
 }
