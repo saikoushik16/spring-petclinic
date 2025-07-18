@@ -1,0 +1,11 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/saikoushik16/spring-petclinic.git', branch: 'main'
+            }
+        }
+   }
+}
