@@ -7,5 +7,10 @@ pipeline {
                 git url: 'https://github.com/saikoushik16/spring-petclinic.git', branch: 'main'
             }
         }
+        stage('build') {
+            steps {
+                sh 'mvn clean install'
+            }
+        }
    }
 }
