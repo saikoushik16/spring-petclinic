@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+environment {
+        SONARQUBE_ENV = 'SonarQube' // Replace with your SonarQube installation name in Jenkins
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -10,6 +14,13 @@ pipeline {
         stage('build') {
             steps {
                 sh 'mvn clean install'
+            }
+        }
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv("${SONARQUBE_ENV}") {
+                    sh 'mvn sonar:sonar -Dsonar.projectKey=spring-petclinic -Dsonar.host.url=http://localhost:9000 -Dsonar.login=sonar'
+                }
             }
         }
    }
