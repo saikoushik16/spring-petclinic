@@ -14,7 +14,7 @@ pipeline {
         }
         stage('Build Docker Image') {
             steps {
-                sh 'sudo docker build -t pet-clinic .' //build the docker image
+                sh 'docker build -t pet-clinic .' //build the docker image
             }
         }
         stage('Push Docker Image') {  
@@ -22,9 +22,9 @@ pipeline {
                 // login to ecr registry 
                 sh 'aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 539825459983.dkr.ecr.us-east-1.amazonaws.com'
                 // tag the docker image
-                sh 'sudo docker tag pet-clinic:latest 539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:latest'
+                sh 'docker tag pet-clinic:latest 539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:latest'
                 // push the docker image to the registry
-                sh 'sudo docker push 539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:latest'   //push the docker image to the registry
+                sh 'docker push 539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:latest'   //push the docker image to the registry
             }
         }
         stage('Archive') {
