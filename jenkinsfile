@@ -1,28 +1,48 @@
 pipeline {
     agent any
 
-environment {
-        SONARQUBE_ENV = 'SonarQube' // Replace with your SonarQube installation name in Jenkins
-        SONAR_TOKEN = credentials('sonar') // Inject the token securely
-    }
-
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/saikoushik16/spring-petclinic.git', branch: 'main'
+                checkout scm
             }
         }
-        stage('build') {
+        stage('Build') {
             steps {
-                sh 'mvn clean install -Dcheckstyle.skip=true'
+                sh 'mvn clean install -DskipTests'
             }
         }
-        stage('SonarQube Analysis') {
+        stage('Test') {
             steps {
-                withSonarQubeEnv("${SONARQUBE_ENV}") {
-                    sh 'mvn sonar:sonar -Dsonar.projectKey=spring-petclinic -Dsonar.host.url=http://18.207.210.108:9000 -Dsonar.login=${sonar}'
+                sh 'mvn test'
+            }
+            post {
+                always {
+                    junit '
+                    build/test-results/test/*.xml'
                 }
             }
         }
-   }
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t pet-clinic .' //build the docker image
+            }
+        }
+        stage('Push Docker Image') {  
+            steps {
+                // login to ecr registry 
+                sh 'aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 539825459983.dkr.ecr.us-east-1.amazonaws.com'
+                // tag the docker image
+                sh 'docker tag pet-clinic:latest 539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:latest'
+                // push the docker image to the registry
+                sh 'docker push 539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:latest'   //push the docker image to the registry
+            }
+        }
+        stage('Archive') {
+            steps {
+                archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true
+            }                   
+        }
+    }
 }
+
