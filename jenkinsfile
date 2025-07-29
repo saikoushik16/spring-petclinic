@@ -19,6 +19,9 @@ pipeline {
         }
         stage('Push Docker Image') {  
             steps {
+                sh 'aws configure set aws_access_key_id AKIAX3MA22MH4WZHYE5P'
+                sh 'aws configure set aws_secret_access_key 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'
+                sh 'aws configure set region us-east-1'
                 // login to ecr registry 
                 sh 'aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 539825459983.dkr.ecr.us-east-1.amazonaws.com'
                 // tag the docker image
