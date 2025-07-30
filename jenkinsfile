@@ -34,31 +34,13 @@ environment {
                         sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
                         // Tag Docker image with ECR repository URI
-                        sh "docker tag ${IMAGE_NAME}:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:latest"
+                        sh "docker tag ${IMAGE_NAME}:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:1.0.0"
 
                         // Push the image to AWS ECR
-                        sh "docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:latest"
+                        sh "docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:1.0.0"
                     }
                 }
             }
-        }
-        //stage('Push Docker Image') {  
-        //    steps {
-        //        sh 'aws configure set aws_access_key_id AKIAX3MA22MH4WZHYE5P'
-         //       sh 'aws configure set aws_secret_access_key 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'
-         //       sh 'aws configure set region us-east-1'
-                // login to ecr registry 
-           //     sh 'aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 539825459983.dkr.ecr.us-east-1.amazonaws.com'
-                // tag the docker image
-             //   sh 'docker tag pet-clinic:latest 539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:latest'
-                // push the docker image to the registry
-               // sh 'docker push 539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:latest'   //push the docker image to the registry
-            //}
-        //}
-        stage('Archive') {
-            steps {
-                archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true
-            }                   
         }
     }
 }
