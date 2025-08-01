@@ -1,12 +1,17 @@
 pipeline {
     agent any
-environment {
+    environment {
         // AWS related environment variables
-        AWS_REGION = 'us-east-1'  // Change this to your region
-        AWS_ACCOUNT_ID = '539825459983'  // Replace with your AWS Account ID
-        ECR_REPO_NAME = 'pet-clinic'  // Replace with your ECR repository name
+        AWS_REGION = 'us-east-1'
+        AWS_ACCOUNT_ID = '539825459983'
+        ECR_REPO_NAME = 'pet-clinic'
         IMAGE_NAME = 'pet-clinic'
-        AWS_CREDENTIALS_ID = 'aws'  // Replace with your Jenkins AWS credentials ID
+        AWS_CREDENTIALS_ID = 'aws'
+
+        // SonarQube
+        SONARQUBE_ENV = 'SonarQube' // The name you configured in Jenkins global settings
+        SONAR_PROJECT_KEY = 'pet-clinic' // Replace with your project key
+        SONAR_SCANNER_CREDENTIALS_ID = 'sonar' // Replace with your Jenkins credential ID for the token
     }
 
     stages {
@@ -20,23 +25,29 @@ environment {
                 sh 'mvn clean install -DskipTests'
             }
         }
+        stage('SonarQube Scan') {
+            steps {
+                withSonarQubeEnv("${SONARQUBE_ENV}") {
+                    sh """
+                        mvn sonar:sonar \
+                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                            -Dsonar.host.url=$SONAR_HOST_URL \
+                            -Dsonar.login=$SONAR_AUTH_TOKEN
+                    """
+                }
+            }
+        }
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t  ${IMAGE_NAME} .' //build the docker image
+                sh 'docker build -t ${IMAGE_NAME} .'
             }
         }
         stage('Authenticate and Push to AWS ECR') {
             steps {
                 script {
-                    // Authenticate with AWS using AWS CLI and the credentials stored in Jenkins
                     withCredentials([aws(credentialsId: AWS_CREDENTIALS_ID)]) {
-                        // Log in to AWS ECR
                         sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-
-                        // Tag Docker image with ECR repository URI
                         sh "docker tag ${IMAGE_NAME}:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:1.0.0"
-
-                        // Push the image to AWS ECR
                         sh "docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:1.0.0"
                     }
                 }
@@ -44,4 +55,3 @@ environment {
         }
     }
 }
-
