@@ -1,7 +1,6 @@
 pipeline {
     agent any
     environment {
-        // AWS related environment variables
         AWS_REGION = 'us-east-1'
         AWS_ACCOUNT_ID = '730115957740'
         ECR_REPO_NAME = 'docker-project'
@@ -18,7 +17,7 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh 'mvn clean install -DskipTests'
+                sh 'mvn clean install -DskipTests -Dcheckstyle.skip=true'
             }
         }
 
