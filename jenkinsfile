@@ -32,7 +32,7 @@ pipeline {
         sonar-scanner \
         -Dsonar.projectKey=spring-petclinic\
         -Dsonar.host.url=http://http://3.83.172.83:9000\
-        -Dsonar.login=$SONAR_AUTH_TOKEN
+        -Dsonar.login=${SONAR_AUTH_TOKEN}
     """
                 }
             }
