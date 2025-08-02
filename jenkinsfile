@@ -3,14 +3,14 @@ pipeline {
     environment {
         // AWS related environment variables
         AWS_REGION = 'us-east-1'
-        AWS_ACCOUNT_ID = '539825459983'
-        ECR_REPO_NAME = 'pet-clinic'
+        AWS_ACCOUNT_ID = '730115957740'
+        ECR_REPO_NAME = 'docker-project'
         IMAGE_NAME = 'pet-clinic'
-        AWS_CREDENTIALS_ID = 'aws'
+        AWS_CREDENTIALS_ID = 'AWS'
 
         // SonarQube
         SONARQUBE_ENV = 'SonarQube' // The name you configured in Jenkins global settings
-        SONAR_PROJECT_KEY = 'pet-clinic' // Replace with your project key
+        SONAR_PROJECT_KEY = 'spring-petclinic' // Replace with your project key
         SONAR_SCANNER_CREDENTIALS_ID = 'sonar' // Replace with your Jenkins credential ID for the token
     }
 
