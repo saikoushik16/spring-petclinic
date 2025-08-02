@@ -29,11 +29,11 @@ pipeline {
             steps {
                 withSonarQubeEnv("${SONARQUBE_ENV}") {
                     sh """
-                        mvn sonar:sonar \
-                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                            -Dsonar.host.url=$SONAR_HOST_URL \
-                            -Dsonar.login=$SONAR_AUTH_TOKEN
-                    """
+        sonar-scanner \
+        -Dsonar.projectKey=spring-petclinic\
+        -Dsonar.host.url=http://http://3.83.172.83:9000\
+        -Dsonar.login=$SONAR_AUTH_TOKEN
+    """
                 }
             }
         }
