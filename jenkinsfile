@@ -1,8 +1,7 @@
 pipeline {
     agent any
-
     environment {
-        // AWS-related environment variables
+        // AWS related environment variables
         AWS_REGION = 'us-east-1'
         AWS_ACCOUNT_ID = '730115957740'
         ECR_REPO_NAME = 'docker-project'
@@ -19,7 +18,7 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh 'mvn clean install -DskipTests -Dcheckstyle.skip=true'
+                sh 'mvn clean install -DskipTests'
             }
         }
 
@@ -33,7 +32,10 @@ pipeline {
             steps {
                 script {
                     withCredentials([aws(credentialsId: AWS_CREDENTIALS_ID)]) {
-                        sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+                        sh """
+                            aws ecr get-login-password --region ${AWS_REGION} | \
+                            docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                        """
                         sh "docker tag ${IMAGE_NAME}:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:1.0.0"
                         sh "docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:1.0.0"
                     }
