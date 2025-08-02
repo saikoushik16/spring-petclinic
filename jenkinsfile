@@ -1,17 +1,20 @@
 pipeline {
     agent any
+
+    parameters {
+        booleanParam(name: 'RUN_SONAR_SCAN', defaultValue: true, description: 'Run SonarQube Scan?')
+    }
+
     environment {
-        // AWS related environment variables
         AWS_REGION = 'us-east-1'
         AWS_ACCOUNT_ID = '730115957740'
         ECR_REPO_NAME = 'docker-project'
         IMAGE_NAME = 'pet-clinic'
         AWS_CREDENTIALS_ID = 'AWS'
 
-        // SonarQube
-        SONARQUBE_ENV = 'SonarQube' // The name you configured in Jenkins global settings
-        SONAR_PROJECT_KEY = 'spring-petclinic' // Replace with your project key
-        SONAR_SCANNER_CREDENTIALS_ID = 'sonar' // Replace with your Jenkins credential ID for the token
+        SONARQUBE_ENV = 'SonarQube'
+        SONAR_PROJECT_KEY = 'spring-petclinic'
+        SONAR_SCANNER_CREDENTIALS_ID = 'sonar'
     }
 
     stages {
@@ -20,28 +23,37 @@ pipeline {
                 checkout scm
             }
         }
+
         stage('Build') {
             steps {
                 sh 'mvn clean install -DskipTests'
             }
         }
+
         stage('SonarQube Scan') {
+            when {
+                expression { return params.RUN_SONAR_SCAN }
+            }
             steps {
-                withSonarQubeEnv("${SONARQUBE_ENV}") {
-                    sh """
-        sonar-scanner \
-        -Dsonar.projectKey=spring-petclinic\
-        -Dsonar.host.url=http://http://3.83.172.83:9000\
-        -Dsonar.login=${SONAR_AUTH_TOKEN}
-    """
+                withCredentials([string(credentialsId: "${SONAR_SCANNER_CREDENTIALS_ID}", variable: 'SONAR_AUTH_TOKEN')]) {
+                    withSonarQubeEnv("${SONARQUBE_ENV}") {
+                        sh """
+                            sonar-scanner \
+                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                            -Dsonar.host.url=http://3.83.172.83:9000 \
+                            -Dsonar.login=${SONAR_AUTH_TOKEN}
+                        """
+                    }
                 }
             }
         }
+
         stage('Build Docker Image') {
             steps {
                 sh 'docker build -t ${IMAGE_NAME} .'
             }
         }
+
         stage('Authenticate and Push to AWS ECR') {
             steps {
                 script {
