@@ -163,3 +163,75 @@ For additional details, please refer to the blog post [Hello DCO, Goodbye CLA: S
 ## License
 
 The Spring PetClinic sample application is released under version 2.0 of the [Apache License](https://www.apache.org/licenses/LICENSE-2.0).
+
+## JenkinsFile
+
+```
+   pipeline {
+    agent any
+    environment {
+        AWS_REGION = 'us-east-1'
+        AWS_ACCOUNT_ID = '539825459983'
+        ECR_REPO_NAME = 'pet-clinic'
+        IMAGE_NAME = 'pet-clinic'
+        AWS_CREDENTIALS_ID = 'AWS'
+    }
+
+    stages {
+        stage('Checkout main branch') {
+            steps {
+                checkout([$class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/saikoushik16/spring-petclinic.git',
+                        credentialsId: 'git'  // <-- replace this
+                    ]]
+                ])
+            }
+        }
+
+
+        stage('Build') {
+            steps {
+                sh 'mvn clean install -DskipTests -Dcheckstyle.skip=true'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t ${IMAGE_NAME} .'
+            }
+        }
+
+        stage('Authenticate and Push to AWS ECR') {
+            steps {
+                script {
+                    withCredentials([aws(credentialsId: AWS_CREDENTIALS_ID)]) {
+                        sh """
+                            aws ecr get-login-password --region ${AWS_REGION} | \
+                            docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                        """
+                        sh "docker tag ${IMAGE_NAME}:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:1.0.0"
+                        sh "docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:1.0.0"
+                    }
+                }
+            }
+        }
+        stage('Authenticate aws and deploy EKS') {
+            steps {
+                script {
+                    withCredentials([aws(credentialsId: AWS_CREDENTIALS_ID)]) {
+                        sh """
+                            aws eks update-kubeconfig --region us-east-1 --name demo-eks
+                        """
+                        sh "kubectl get nodes"
+                        sh "kubectl apply -f k8s/petclinic.yml"
+                        sh "kubectl apply -f k8s/db.yml"
+                        sh "kubectl get pods"
+                    }
+                }
+            }
+        }
+    }
+} 
+    ```
