@@ -2,18 +2,25 @@ pipeline {
     agent any
     environment {
         AWS_REGION = 'us-east-1'
-        AWS_ACCOUNT_ID = '730115957740'
-        ECR_REPO_NAME = 'docker-project'
+        AWS_ACCOUNT_ID = '539825459983'
+        ECR_REPO_NAME = 'pet-clinic'
         IMAGE_NAME = 'pet-clinic'
         AWS_CREDENTIALS_ID = 'AWS'
     }
 
     stages {
-        stage('Checkout') {
+        stage('Checkout main branch') {
             steps {
-                checkout scm
+                checkout([$class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/saikoushik16/spring-petclinic.git',
+                        credentialsId: 'git'  // <-- replace this
+                    ]]
+                ])
             }
         }
+
 
         stage('Build') {
             steps {
@@ -37,6 +44,21 @@ pipeline {
                         """
                         sh "docker tag ${IMAGE_NAME}:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:1.0.0"
                         sh "docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:1.0.0"
+                    }
+                }
+            }
+        }
+        stage('Authenticate aws and deploy EKS') {
+            steps {
+                script {
+                    withCredentials([aws(credentialsId: AWS_CREDENTIALS_ID)]) {
+                        sh """
+                            aws eks update-kubeconfig --region us-east-1 --name demo-eks
+                        """
+                        sh "kubectl get nodes"
+                        sh "kubectl apply -f k8s/petclinic.yml"
+                        sh "kubectl apply -f k8s/db.yml"
+                        sh "kubectl get pods"
                     }
                 }
             }
