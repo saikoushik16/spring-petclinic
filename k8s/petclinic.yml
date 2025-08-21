@@ -28,9 +28,11 @@ spec:
       labels:
         app: petclinic
     spec:
+      imagePullSecret:
+      - name: ecr-secret
       containers:
         - name: workload
-          image: dsyer/petclinic
+          image: 539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:latest
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: postgres
