@@ -31,7 +31,7 @@ spec:
       containers:
         - name: workload
           image: 539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:latest
-        imagePullSecret:
+      imagePullSecret:
         - name: ecr-secret
           env:
             - name: SPRING_PROFILES_ACTIVE
