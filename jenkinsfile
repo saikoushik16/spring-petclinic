@@ -48,20 +48,32 @@ pipeline {
                 }
             }
         }
-        stage('Authenticate aws and deploy EKS') {
-            steps {
-                script {
-                    withCredentials([aws(credentialsId: AWS_CREDENTIALS_ID)]) {
-                        sh """
-                            aws eks update-kubeconfig --region us-east-1 --name demo-eks
-                        """
-                        sh "kubectl get nodes"
-                        sh "kubectl apply -f k8s/petclinic.yml"
-                        sh "kubectl apply -f k8s/db.yml"
-                        sh "kubectl get pods"
-                    }
-                }
+        stage('Authenticate AWS and Deploy to EKS') {
+    steps {
+        script {
+            withCredentials([aws(credentialsId: AWS_CREDENTIALS_ID)]) {
+                sh '''
+                    # Configure kubeconfig for the EKS cluster
+                    aws eks update-kubeconfig --region us-east-1 --name demo-eks
+
+                    # Create or update the ECR docker-registry secret
+                    kubectl delete secret ecr-secret --ignore-not-found
+                    kubectl create secret docker-registry ecr-secret \
+                      --docker-server=539825459983.dkr.ecr.us-east-1.amazonaws.com \
+                      --docker-username=AWS \
+                      --docker-password="$(aws ecr get-login-password --region us-east-1)" \
+                      --docker-email=example@example.com
+
+                    # Apply manifests
+                    kubectl apply -f k8s/db.yml
+                    kubectl apply -f k8s/petclinic.yml
+
+                    # Show pod status
+                    kubectl get pods
+                '''
             }
         }
+    }
+}
     }
 }
