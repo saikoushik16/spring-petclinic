@@ -31,8 +31,6 @@ spec:
       containers:
         - name: workload
           image: 539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:latest
-      imagePullSecret:
-        - name: ecr-secret
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: postgres
@@ -58,6 +56,8 @@ spec:
             - mountPath: /bindings/secret
               name: binding
               readOnly: true
+      imagePullSecrets:
+        - name: ecr-secret
       volumes:
         - name: binding
           projected:
