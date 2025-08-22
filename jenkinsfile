@@ -65,9 +65,10 @@ pipeline {
                       --docker-email=example@example.com
 
                     # Apply manifests
+                    sed -i 's|\\(image: 539825459983\\.dkr\\.ecr\\.us-east-1\\.amazonaws\\.com/pet-clinic:\\).*|\\11.0.0|' k8s/petclinic.yml
                     kubectl apply -f k8s/db.yml
                     kubectl apply -f k8s/petclinic.yml
-
+                    sleep 10
                     # Show pod status
                     kubectl get pods
                 '''
