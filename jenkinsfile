@@ -48,14 +48,14 @@ pipeline {
             steps {
                 script {
                     withCredentials([aws(credentialsId: AWS_CREDENTIALS_ID)]) {
-                        sh """
+                        sh '''
                             aws ecr get-login-password --region ${AWS_REGION} | \
                             docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-                        """
-                        sh """
+                        '''
+                        sh '''
                             docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${IMAGE_TAG}
                             docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${IMAGE_TAG}
-                        """
+                        '''
                     }
                 }
             }
@@ -65,7 +65,7 @@ pipeline {
             steps {
                 script {
                     withCredentials([aws(credentialsId: AWS_CREDENTIALS_ID)]) {
-                        sh """
+                        sh '''
                             aws eks update-kubeconfig --region ${AWS_REGION} --name demo-eks
 
                             kubectl delete secret ecr-secret --ignore-not-found
@@ -81,7 +81,7 @@ pipeline {
                             kubectl apply -f k8s/petclinic.yml
                             sleep 20
                             kubectl get pods
-                        """
+                        '''
                     }
                 }
             }
