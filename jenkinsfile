@@ -1,5 +1,6 @@
 pipeline {
     agent any
+
     environment {
         AWS_REGION = 'us-east-1'
         AWS_ACCOUNT_ID = '539825459983'
@@ -15,12 +16,21 @@ pipeline {
                     branches: [[name: '*/main']],
                     userRemoteConfigs: [[
                         url: 'https://github.com/saikoushik16/spring-petclinic.git',
-                        credentialsId: 'git'  // <-- replace this
+                        credentialsId: 'git'
                     ]]
                 ])
             }
         }
 
+        stage('Set Dynamic Image Tag') {
+            steps {
+                script {
+                    def timestamp = new Date().format("yyyyMMddHHmmss")
+                    env.IMAGE_TAG = "v1.0.${env.BUILD_NUMBER}-${timestamp}"
+                    echo "Using dynamic image tag: ${env.IMAGE_TAG}"
+                }
+            }
+        }
 
         stage('Build') {
             steps {
@@ -30,7 +40,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t ${IMAGE_NAME} .'
+                sh 'docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .'
             }
         }
 
@@ -42,39 +52,39 @@ pipeline {
                             aws ecr get-login-password --region ${AWS_REGION} | \
                             docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
                         """
-                        sh "docker tag ${IMAGE_NAME}:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:1.0.0"
-                        sh "docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:1.0.0"
+                        sh """
+                            docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${IMAGE_TAG}
+                            docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${IMAGE_TAG}
+                        """
                     }
                 }
             }
         }
+
         stage('Authenticate AWS and Deploy to EKS') {
-    steps {
-        script {
-            withCredentials([aws(credentialsId: AWS_CREDENTIALS_ID)]) {
-                sh '''
-                    # Configure kubeconfig for the EKS cluster
-                    aws eks update-kubeconfig --region us-east-1 --name demo-eks
+            steps {
+                script {
+                    withCredentials([aws(credentialsId: AWS_CREDENTIALS_ID)]) {
+                        sh """
+                            aws eks update-kubeconfig --region ${AWS_REGION} --name demo-eks
 
-                    # Create or update the ECR docker-registry secret
-                    kubectl delete secret ecr-secret --ignore-not-found
-                    kubectl create secret docker-registry ecr-secret \
-                      --docker-server=539825459983.dkr.ecr.us-east-1.amazonaws.com \
-                      --docker-username=AWS \
-                      --docker-password="$(aws ecr get-login-password --region us-east-1)" \
-                      --docker-email=example@example.com
+                            kubectl delete secret ecr-secret --ignore-not-found
+                            kubectl create secret docker-registry ecr-secret \
+                              --docker-server=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com \
+                              --docker-username=AWS \
+                              --docker-password="$(aws ecr get-login-password --region ${AWS_REGION})" \
+                              --docker-email=example@example.com
 
-                    # Apply manifests
-                    sed -i 's|\\(image: 539825459983\\.dkr\\.ecr\\.us-east-1\\.amazonaws\\.com/pet-clinic:\\).*|\\11.0.0|' k8s/petclinic.yml
-                    kubectl apply -f k8s/db.yml
-                    kubectl apply -f k8s/petclinic.yml
-                    sleep 10
-                    # Show pod status
-                    kubectl get pods
-                '''
+                            sed -i 's|\\(image: ${AWS_ACCOUNT_ID}\\.dkr\\.ecr\\.${AWS_REGION}\\.amazonaws\\.com/${ECR_REPO_NAME}:\\).*|\\1${IMAGE_TAG}|' k8s/petclinic.yml
+
+                            kubectl apply -f k8s/db.yml
+                            kubectl apply -f k8s/petclinic.yml
+                            sleep 20
+                            kubectl get pods
+                        """
+                    }
+                }
             }
         }
-    }
-}
     }
 }
