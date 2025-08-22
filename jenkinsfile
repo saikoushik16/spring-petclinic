@@ -75,8 +75,10 @@ pipeline {
                               --docker-password="$(aws ecr get-login-password --region ${AWS_REGION})" \
                               --docker-email=example@example.com
 
-                            echo "sed -i "s|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:${IMAGE_TAG}|" k8s/petclinic.yml
-"
+                            sh """
+                                  sed -i 's|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic.*|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:${IMAGE_TAG}|' k8s/petclinic.yml
+                            """
+
 
                             kubectl apply -f k8s/db.yml
                             kubectl apply -f k8s/petclinic.yml
