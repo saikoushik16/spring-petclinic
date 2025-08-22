@@ -76,6 +76,7 @@ pipeline {
                               --docker-email=example@example.com
 
                             sh """
+                                  ls -la
                                   sed -i 's|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic.*|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:${IMAGE_TAG}|' k8s/petclinic.yml
                             """
 
