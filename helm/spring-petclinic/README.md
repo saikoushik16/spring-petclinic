@@ -156,4 +156,102 @@ The application uses Kubernetes service binding to connect to the PostgreSQL dat
 
 - **Liveness Probe**: `/livez` endpoint
 - **Readiness Probe**: `/readyz` endpoint
-- **Database Probes**: TCP socket checks on port 5432 
+- **Database Probes**: TCP socket checks on port 5432
+
+
+######
+
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = 'us-east-1'
+        AWS_ACCOUNT_ID = '539825459983'
+        ECR_REPO_NAME = 'pet-clinic'
+        IMAGE_NAME = 'pet-clinic'
+        AWS_CREDENTIALS_ID = 'AWS'
+    }
+
+    stages {
+        stage('Checkout main branch') {
+            steps {
+                checkout([$class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/saikoushik16/spring-petclinic.git',
+                        credentialsId: 'git'
+                    ]]
+                ])
+            }
+        }
+
+        stage('Set Dynamic Image Tag') {
+            steps {
+                script {
+                    def timestamp = new Date().format("yyyyMMddHHmmss")
+                    env.IMAGE_TAG = "v1.0.${env.BUILD_NUMBER}-${timestamp}"
+                    echo "Using dynamic image tag: ${env.IMAGE_TAG}"
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'mvn clean install -DskipTests -Dcheckstyle.skip=true'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .'
+            }
+        }
+
+        stage('Authenticate and Push to AWS ECR') {
+            steps {
+                script {
+                    withCredentials([aws(credentialsId: AWS_CREDENTIALS_ID)]) {
+                        sh '''
+                            aws ecr get-login-password --region ${AWS_REGION} | \
+                            docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                        '''
+                        sh '''
+                            docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${IMAGE_TAG}
+                            docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${IMAGE_TAG}
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Authenticate AWS and Deploy to EKS') {
+            steps {
+                script {
+                    withCredentials([aws(credentialsId: AWS_CREDENTIALS_ID)]) {
+                        sh '''
+                            aws eks update-kubeconfig --region ${AWS_REGION} --name demo-eks
+
+                            kubectl delete secret ecr-secret --ignore-not-found
+                            kubectl create secret docker-registry ecr-secret \
+                              --docker-server=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com \
+                              --docker-username=AWS \
+                              --docker-password="$(aws ecr get-login-password --region ${AWS_REGION})" \
+                              --docker-email=example@example.com
+                             echo "Current dir: $(pwd)"
+                             ls -lrt
+                             cd k8s
+                             ls -la  
+                            echo "Current dir: $(pwd)"
+                            sed -i "s|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic.*|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:${IMAGE_TAG}|" petclinic.yml
+            
+                            kubectl apply -f db.yml
+                            kubectl apply -f petclinic.yml
+                            sleep 20
+                            kubectl get pods
+                        '''
+                    }
+                }
+            }
+        }
+    }
+}
