@@ -81,8 +81,8 @@ pipeline {
                             echo "Current dir: $(pwd)"
                             sed -i 's|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic.*|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:${IMAGE_TAG}|' petclinic.yml
             
-                            kubectl apply -f k8s/db.yml
-                            kubectl apply -f k8s/petclinic.yml
+                            kubectl apply -f db.yml
+                            kubectl apply -f petclinic.yml
                             sleep 20
                             kubectl get pods
                         '''
