@@ -1,0 +1,141 @@
+# Default values for spring-petclinic
+# This is a YAML-formatted file.
+
+# Global configuration
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+# PetClinic Application Configuration
+petclinic:
+  enabled: true
+  image:
+    repository: 539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  nameOverride: ""
+  fullnameOverride: ""
+  
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: ""
+  
+  replicaCount: 1
+  
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 8080
+  
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: chart-example.local
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls: []
+  
+  livenessProbe:
+    httpGet:
+      path: /livez
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  readinessProbe:
+    httpGet:
+      path: /readyz
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  
+  env:
+    - name: SPRING_PROFILES_ACTIVE
+      value: "postgres"
+    - name: SERVICE_BINDING_ROOT
+      value: "/bindings"
+    - name: SPRING_APPLICATION_JSON
+      value: |
+        {
+          "management.endpoint.health.probes.add-additional-paths": true
+        }
+
+# Database Configuration
+database:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "17.5"
+    pullPolicy: IfNotPresent
+  
+  nameOverride: ""
+  fullnameOverride: ""
+  
+  auth:
+    username: "user"
+    password: "pass"
+    database: "petclinic"
+  
+  service:
+    type: ClusterIP
+    port: 5432
+  
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 8Gi
+  
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  
+  livenessProbe:
+    tcpSocket:
+      port: postgresql
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  readinessProbe:
+    tcpSocket:
+      port: postgresql
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  
+  startupProbe:
+    tcpSocket:
+      port: postgresql
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+
+# Image Pull Secrets
+imagePullSecrets:
+  - name: ecr-secret

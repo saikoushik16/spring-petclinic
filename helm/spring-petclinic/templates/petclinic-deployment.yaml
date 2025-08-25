@@ -1,0 +1,63 @@
+{{- if .Values.petclinic.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "spring-petclinic.app.fullname" . }}
+  labels:
+    {{- include "spring-petclinic.app.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.petclinic.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "spring-petclinic.app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "spring-petclinic.app.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      {{- if .Values.petclinic.serviceAccount.create }}
+      serviceAccountName: {{ include "spring-petclinic.serviceAccountName" . }}
+      {{- end }}
+      containers:
+        - name: workload
+          image: "{{ .Values.petclinic.image.repository }}:{{ .Values.petclinic.image.tag }}"
+          imagePullPolicy: {{ .Values.petclinic.image.pullPolicy }}
+          {{- if .Values.petclinic.env }}
+          env:
+            {{- toYaml .Values.petclinic.env | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.petclinic.service.targetPort }}
+              protocol: TCP
+          {{- if .Values.petclinic.livenessProbe }}
+          livenessProbe:
+            {{- toYaml .Values.petclinic.livenessProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.petclinic.readinessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.petclinic.readinessProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.petclinic.resources }}
+          resources:
+            {{- toYaml .Values.petclinic.resources | nindent 12 }}
+          {{- end }}
+          {{- if .Values.database.enabled }}
+          volumeMounts:
+            - mountPath: /bindings/secret
+              name: binding
+              readOnly: true
+          {{- end }}
+      {{- if .Values.database.enabled }}
+      volumes:
+        - name: binding
+          projected:
+            sources:
+              - secret:
+                  name: {{ include "spring-petclinic.database.fullname" . }}
+      {{- end }}
+{{- end }} 

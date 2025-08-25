@@ -1,0 +1,17 @@
+apiVersion: v2
+name: spring-petclinic
+description: A Helm chart for Spring PetClinic application
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - spring
+  - petclinic
+  - java
+  - microservices
+home: https://github.com/spring-projects/spring-petclinic
+sources:
+  - https://github.com/spring-projects/spring-petclinic
+maintainers:
+  - name: Spring PetClinic Team
+    email: petclinic@spring.io

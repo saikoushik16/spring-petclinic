@@ -1,0 +1,70 @@
+{{- if .Values.database.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "spring-petclinic.database.fullname" . }}
+  labels:
+    {{- include "spring-petclinic.database.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "spring-petclinic.database.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "spring-petclinic.database.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: postgresql
+          image: "{{ .Values.database.image.repository }}:{{ .Values.database.image.tag }}"
+          imagePullPolicy: {{ .Values.database.image.pullPolicy }}
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "spring-petclinic.database.fullname" . }}
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "spring-petclinic.database.fullname" . }}
+                  key: password
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "spring-petclinic.database.fullname" . }}
+                  key: database
+          ports:
+            - name: postgresql
+              containerPort: {{ .Values.database.service.port }}
+              protocol: TCP
+          {{- if .Values.database.livenessProbe }}
+          livenessProbe:
+            {{- toYaml .Values.database.livenessProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.database.readinessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.database.readinessProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.database.startupProbe }}
+          startupProbe:
+            {{- toYaml .Values.database.startupProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.database.resources }}
+          resources:
+            {{- toYaml .Values.database.resources | nindent 12 }}
+          {{- end }}
+          {{- if .Values.database.persistence.enabled }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+              subPath: postgresql
+          {{- end }}
+      {{- if .Values.database.persistence.enabled }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "spring-petclinic.database.fullname" . }}-pvc
+      {{- end }}
+{{- end }} 

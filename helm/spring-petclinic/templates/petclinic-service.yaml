@@ -1,0 +1,17 @@
+{{- if .Values.petclinic.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "spring-petclinic.app.fullname" . }}
+  labels:
+    {{- include "spring-petclinic.app.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.petclinic.service.type }}
+  ports:
+    - port: {{ .Values.petclinic.service.port }}
+      targetPort: {{ .Values.petclinic.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "spring-petclinic.app.selectorLabels" . | nindent 4 }}
+{{- end }} 
