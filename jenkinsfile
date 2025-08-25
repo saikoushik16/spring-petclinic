@@ -78,11 +78,9 @@ pipeline {
                              ls -lrt
                              cd k8s
                              ls -la  
-
-                            sh """
-                                  echo "Current dir: $(pwd)"
-                                  sed -i 's|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic.*|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:${IMAGE_TAG}|' petclinic.yml
-                            """
+                            echo "Current dir: $(pwd)"
+                            sed -i 's|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic.*|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:${IMAGE_TAG}|' petclinic.yml
+            
                             kubectl apply -f k8s/db.yml
                             kubectl apply -f k8s/petclinic.yml
                             sleep 20
