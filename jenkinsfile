@@ -61,34 +61,136 @@ pipeline {
             }
         }
 
-        stage('Authenticate AWS and Deploy to EKS') {
+        stage('Authenticate AWS and Deploy to EKS with Helm') {
             steps {
                 script {
                     withCredentials([aws(credentialsId: AWS_CREDENTIALS_ID)]) {
                         sh '''
+                            # Update kubeconfig for EKS cluster
                             aws eks update-kubeconfig --region ${AWS_REGION} --name demo-eks
 
+                            # Create ECR secret for image pulling
                             kubectl delete secret ecr-secret --ignore-not-found
                             kubectl create secret docker-registry ecr-secret \
                               --docker-server=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com \
                               --docker-username=AWS \
                               --docker-password="$(aws ecr get-login-password --region ${AWS_REGION})" \
                               --docker-email=example@example.com
-                             echo "Current dir: $(pwd)"
-                             ls -lrt
-                             cd k8s
-                             ls -la  
-                            echo "Current dir: $(pwd)"
-                            sed -i "s|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic.*|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:${IMAGE_TAG}|" petclinic.yml
-            
-                            kubectl apply -f db.yml
-                            kubectl apply -f petclinic.yml
-                            sleep 20
-                            kubectl get pods
+                            
+                            echo "Current directory: $(pwd)"
+                            echo "Listing current directory contents:"
+                            ls -la
+                            
+                            # Check if Helm chart exists
+                            if [ ! -d "helm/spring-petclinic" ]; then
+                                echo "ERROR: Helm chart not found at helm/spring-petclinic"
+                                exit 1
+                            fi
+                            
+                            echo "Helm chart found. Listing chart contents:"
+                            ls -la helm/spring-petclinic/
+                            
+                            # Create namespace if it doesn't exist
+                            kubectl create namespace petclinic --dry-run=client -o yaml | kubectl apply -f -
+                            
+                            # Deploy using Helm
+                            echo "Deploying with Helm using image tag: ${IMAGE_TAG}"
+                            
+                            # Check if release exists
+                            if helm list -n petclinic | grep -q "spring-petclinic"; then
+                                echo "Upgrading existing Helm release..."
+                                helm upgrade spring-petclinic ./helm/spring-petclinic \
+                                  --namespace petclinic \
+                                  --set petclinic.image.tag=${IMAGE_TAG} \
+                                  --set petclinic.image.repository=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME} \
+                                  --wait \
+                                  --timeout=2m
+                            else
+                                echo "Installing new Helm release..."
+                                helm install spring-petclinic ./helm/spring-petclinic \
+                                  --namespace petclinic \
+                                  --set petclinic.image.tag=${IMAGE_TAG} \
+                                  --set petclinic.image.repository=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME} \
+                                  --wait \
+                                  --timeout=2m
+                            fi
+                            
+                            # Wait for deployment to be ready
+                            echo "Waiting for deployment to be ready..."
+                            kubectl wait --for=condition=available --timeout=60s deployment/spring-petclinic-app -n petclinic
+                            
+                            # Show deployment status
+                            echo "Deployment status:"
+                            kubectl get pods -n petclinic
+                            kubectl get svc -n petclinic
+                            
+                            # Get service URL
+                            echo "Service information:"
+                            kubectl get svc spring-petclinic-app -n petclinic -o wide
                         '''
                     }
                 }
             }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    withCredentials([aws(credentialsId: AWS_CREDENTIALS_ID)]) {
+                        sh '''
+                            # Update kubeconfig for EKS cluster
+                            aws eks update-kubeconfig --region ${AWS_REGION} --name demo-eks
+                            
+                            echo "=== Deployment Verification ==="
+                            
+                            # Check pod status
+                            echo "Pod Status:"
+                            kubectl get pods -n petclinic -o wide
+                            
+                            # Check service status
+                            echo "Service Status:"
+                            kubectl get svc -n petclinic
+                            
+                            # Check Helm release status
+                            echo "Helm Release Status:"
+                            helm list -n petclinic
+                            
+                            # Check application health
+                            echo "Application Health Check:"
+                            kubectl get pods -n petclinic -l app.kubernetes.io/name=spring-petclinic-app -o jsonpath='{.items[0].status.containerStatuses[0].ready}' | grep -q "true" && echo "Application is ready!" || echo "Application is not ready yet"
+                            
+                            # Get LoadBalancer URL if available
+                            echo "LoadBalancer Information:"
+                            kubectl get svc spring-petclinic-app -n petclinic -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null && echo "" || echo "LoadBalancer hostname not available yet"
+                            
+                            echo "=== Deployment Complete ==="
+                        '''
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo "Pipeline completed with status: ${currentBuild.result}"
+        }
+        success {
+            echo "✅ Deployment successful! Spring PetClinic has been deployed to EKS using Helm."
+            echo "📊 Build Number: ${env.BUILD_NUMBER}"
+            echo "🏷️  Image Tag: ${env.IMAGE_TAG}"
+            echo "🔗 ECR Repository: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${IMAGE_TAG}"
+        }
+        failure {
+            echo "❌ Deployment failed! Please check the logs for more details."
+            echo "🔍 Troubleshooting tips:"
+            echo "   - Check if EKS cluster is accessible"
+            echo "   - Verify ECR repository permissions"
+            echo "   - Check Helm chart syntax and values"
+            echo "   - Review pod logs: kubectl logs -n petclinic -l app.kubernetes.io/name=spring-petclinic-app"
+        }
+        cleanup {
+            echo "🧹 Cleaning up workspace..."
         }
     }
 }
