@@ -76,11 +76,11 @@ pipeline {
                               --docker-email=example@example.com
                              echo "Current dir: $(pwd)"
                              ls -lrt
+                             cd k8s
+                             ls -la  
 
                             sh """
                                   echo "Current dir: $(pwd)"
-                                  cd k8s
-                                  ls -la
                                   sed -i 's|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic.*|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:${IMAGE_TAG}|' petclinic.yml
                             """
                             kubectl apply -f k8s/db.yml
