@@ -79,14 +79,10 @@ pipeline {
 
                             sh """
                                   echo "Current dir: $(pwd)"
-                                  echo "Files in workspace:"
+                                  cd k8s
                                   ls -la
-                                  echo "Files in k8s/:"
-                                  ls -la k8s || echo "Directory k8s not found"
-                                  sed -i 's|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic.*|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:${IMAGE_TAG}|' /var/lib/jenkins/workspace/spring-petclinic/k8s/petclinic.yml
+                                  sed -i 's|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic.*|539825459983.dkr.ecr.us-east-1.amazonaws.com/pet-clinic:${IMAGE_TAG}|' petclinic.yml
                             """
-
-
                             kubectl apply -f k8s/db.yml
                             kubectl apply -f k8s/petclinic.yml
                             sleep 20
