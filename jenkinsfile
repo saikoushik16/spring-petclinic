@@ -89,8 +89,6 @@ pipeline {
                             
                             echo "Helm chart found. Listing chart contents:"
                             ls -la helm/spring-petclinic/
-                            cd ./helm/spring-petclinic
-                            ls -la
                             
                             # Create namespace if it doesn't exist
                             kubectl create namespace petclinic --dry-run=client -o yaml | kubectl apply -f -
@@ -101,25 +99,25 @@ pipeline {
                             # Check if release exists
                             if helm list -n petclinic | grep -q "spring-petclinic"; then
                                 echo "Upgrading existing Helm release..."
-                                helm upgrade spring-petclinic ./helm/spring-petclinic \
+                                helm upgrade spring-petclinic . \
                                   --namespace petclinic \
                                   --set petclinic.image.tag=${IMAGE_TAG} \
                                   --set petclinic.image.repository=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME} \
                                   --wait \
-                                  --timeout=2m
+                                  --timeout=10m
                             else
                                 echo "Installing new Helm release..."
-                                helm install spring-petclinic ./helm/spring-petclinic \
+                                helm install spring-petclinic . \
                                   --namespace petclinic \
                                   --set petclinic.image.tag=${IMAGE_TAG} \
                                   --set petclinic.image.repository=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME} \
                                   --wait \
-                                  --timeout=2m
+                                  --timeout=10m
                             fi
                             
                             # Wait for deployment to be ready
                             echo "Waiting for deployment to be ready..."
-                            kubectl wait --for=condition=available --timeout=60s deployment/spring-petclinic-app -n petclinic
+                            kubectl wait --for=condition=available --timeout=300s deployment/spring-petclinic-app -n petclinic
                             
                             # Show deployment status
                             echo "Deployment status:"
