@@ -54,10 +54,10 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 Create the name of the service account to use
 */}}
 {{- define "spring-petclinic.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "spring-petclinic.fullname" .) .Values.serviceAccount.name }}
+{{- if .Values.petclinic.serviceAccount.create }}
+{{- default (include "spring-petclinic.fullname" .) .Values.petclinic.serviceAccount.name }}
 {{- else }}
-{{- default "default" .Values.serviceAccount.name }}
+{{- default "default" .Values.petclinic.serviceAccount.name }}
 {{- end }}
 {{- end }}
 
