@@ -117,7 +117,7 @@ pipeline {
                                   --set petclinic.image.tag=${IMAGE_TAG} \
                                   --set petclinic.image.repository=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME} \
                                   --wait \
-                                  --timeout=10m
+                                  --timeout=2m
                             else
                                 echo "Installing new Helm release..."
                                 helm install spring-petclinic helm/spring-petclinic \
@@ -125,7 +125,7 @@ pipeline {
                                   --set petclinic.image.tag=${IMAGE_TAG} \
                                   --set petclinic.image.repository=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME} \
                                   --wait \
-                                  --timeout=10m
+                                  --timeout=2m
                             fi
                             
                             # Wait for deployment to be ready
