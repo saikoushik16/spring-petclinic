@@ -90,6 +90,19 @@ pipeline {
                             echo "Helm chart found. Listing chart contents:"
                             ls -la helm/spring-petclinic/
                             
+                            # Clean up build artifacts and temporary files before Helm deployment
+                            echo "Cleaning up build artifacts and temporary files..."
+                            find . -name "*.pack" -type f -delete
+                            find . -name "*.tmp" -type f -delete
+                            find . -name "*.temp" -type f -delete
+                            find . -name "*.cache" -type f -delete
+                            find . -name "*.lock" -type f -delete
+                            rm -rf target/ 2>/dev/null || true
+                            rm -rf build/ 2>/dev/null || true
+                            
+                            echo "Workspace after cleanup:"
+                            ls -la
+                            
                             # Create namespace if it doesn't exist
                             kubectl create namespace petclinic --dry-run=client -o yaml | kubectl apply -f -
                             
@@ -99,7 +112,7 @@ pipeline {
                             # Check if release exists
                             if helm list -n petclinic | grep -q "spring-petclinic"; then
                                 echo "Upgrading existing Helm release..."
-                                helm upgrade spring-petclinic . \
+                                helm upgrade spring-petclinic helm/spring-petclinic \
                                   --namespace petclinic \
                                   --set petclinic.image.tag=${IMAGE_TAG} \
                                   --set petclinic.image.repository=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME} \
@@ -107,7 +120,7 @@ pipeline {
                                   --timeout=10m
                             else
                                 echo "Installing new Helm release..."
-                                helm install spring-petclinic . \
+                                helm install spring-petclinic helm/spring-petclinic \
                                   --namespace petclinic \
                                   --set petclinic.image.tag=${IMAGE_TAG} \
                                   --set petclinic.image.repository=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME} \
