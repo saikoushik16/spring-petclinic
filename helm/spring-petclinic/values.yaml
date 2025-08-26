@@ -15,8 +15,8 @@ petclinic:
     tag: "latest"
     pullPolicy: IfNotPresent
   
-  nameOverride: ""
-  fullnameOverride: ""
+  nameOverride: "petclinic"
+  fullnameOverride: "petclinic"
   
   serviceAccount:
     create: true
@@ -37,6 +37,7 @@ petclinic:
     type: LoadBalancer
     port: 80
     targetPort: 8080
+    name: "petclinic"
   
   ingress:
     enabled: false
@@ -78,6 +79,12 @@ petclinic:
           "management.endpoint.health.probes.add-additional-paths": true
         }
 
+  # Service binding configuration
+  serviceBinding:
+    enabled: true
+    secretName: "demo-db"
+    mountPath: "/bindings/secret"
+
 # Database Configuration
 database:
   enabled: true
@@ -86,8 +93,8 @@ database:
     tag: "17.5"
     pullPolicy: IfNotPresent
   
-  nameOverride: ""
-  fullnameOverride: ""
+  nameOverride: "demo-db"
+  fullnameOverride: "demo-db"
   
   auth:
     username: "user"
@@ -97,6 +104,7 @@ database:
   service:
     type: ClusterIP
     port: 5432
+    name: "demo-db"
   
   persistence:
     enabled: true
@@ -135,6 +143,20 @@ database:
     periodSeconds: 10
     timeoutSeconds: 5
     failureThreshold: 30
+
+# Database Secret Configuration
+databaseSecret:
+  enabled: true
+  name: "demo-db"
+  type: "servicebinding.io/postgresql"
+  data:
+    type: "postgresql"
+    provider: "postgresql"
+    host: "demo-db"
+    port: "5432"
+    database: "petclinic"
+    username: "user"
+    password: "pass"
 
 # Image Pull Secrets
 imagePullSecrets:
