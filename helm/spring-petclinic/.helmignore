@@ -48,4 +48,43 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 # dotenv environment variables file
-.env 
+.env
+
+# Build artifacts and temporary files
+target/
+build/
+*.jar
+*.war
+*.ear
+*.pack
+*.tmp
+*.temp
+*.cache
+*.lock
+
+# Maven/Gradle specific
+.mvn/
+gradle/
+gradlew
+gradlew.bat
+mvnw
+mvnw.cmd
+pom.xml
+build.gradle
+settings.gradle
+
+# IDE and editor files
+*.iml
+*.ipr
+*.iws
+.settings/
+.classpath
+.project
+.metadata/
+
+# OS specific
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/ 
